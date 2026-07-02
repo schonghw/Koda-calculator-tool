@@ -90,7 +90,6 @@ if gemini_api_key:
                 "x-goog-api-key": clean_key
             }
             
-            # UPGRADED: Regional rules and strict fallback logic added to prevent hallucinations
             system_instruction = (
                 "You are an expert financial data routing engineer with comprehensive, native knowledge "
                 "of global equity markets and Yahoo Finance ticker suffix conventions.\n\n"
@@ -116,7 +115,6 @@ if gemini_api_key:
                 "or conversational explanations. Your output must be instantly readable by a Python database query engine."
             )
             
-            # UPGRADED: Added temperature 0.0 to lock out creative guessing
             payload = {
                 "contents": [{
                     "parts": [{
@@ -173,8 +171,15 @@ if selected_ticker:
         spot_price = asset.fast_info['last_price']
         native_currency = asset.fast_info['currency'].upper()
         
-        st.success(f"Active Ticker: **{selected_ticker}** | Current Spot: **{spot_price:,.2f} {native_currency}**")
+        # 🛡️ THE SHIELD LAYER: Insulate the heavy company name scraper
+        try:
+            company_name = asset.info.get('longName', selected_ticker)
+        except Exception:
+            company_name = selected_ticker  # Safe fallback if Yahoo blocks the server
         
+        st.success(f"Active Ticker: **{selected_ticker}** ({company_name}) | Current Spot: **{spot_price:,.2f} {native_currency}**")
+        
+        # Handle FX conversion layer if asset is traded outside the US
         fx_rate = 1.0
         if native_currency != "USD":
             fx_ticker_str = f"USD{native_currency}=X"
